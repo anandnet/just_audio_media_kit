@@ -116,33 +116,17 @@ class MediaKitPlayer extends AudioPlayerPlatform {
     _currentIndex = request.initialIndex ?? 0;
     _bufferedPosition = Duration.zero;
     _position = Duration.zero;
-
-    if (request.audioSourceMessage is ConcatenatingAudioSourceMessage) {
-      final as = request.audioSourceMessage as ConcatenatingAudioSourceMessage;
-      final playable = Playlist(
-          as.children.map(_convertAudioSourceIntoMediaKit).toList(),
-          index: _currentIndex);
-
-      await _player.open(playable);
-    } else {
-      final playable =
-          _convertAudioSourceIntoMediaKit(request.audioSourceMessage);
-      _logger.fine('playable is ${playable.toString()}');
-      await _player.open(playable);
-    }
-
-    if (request.initialPosition != null) {
-      _position = request.initialPosition!;
-      await _player.seek(request.initialPosition!);
-    }
-
-    _updatePlaybackEvent();
+    _player.pause();
     return LoadResponse(duration: _player.state.duration);
   }
 
   Media _convertAudioSourceIntoMediaKit(AudioSourceMessage audioSource) {
     if (audioSource is UriAudioSourceMessage) {
-      return Media(audioSource.uri, httpHeaders: audioSource.headers);
+      String url = audioSource.uri;
+      if (!url.contains("http")) {
+        url = "file://$url";
+      }
+      return Media(url, httpHeaders: audioSource.headers);
     } else {
       throw UnsupportedError(
           '${audioSource.runtimeType} is currently not supported');
@@ -213,27 +197,17 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   @override
   Future<ConcatenatingInsertAllResponse> concatenatingInsertAll(
       ConcatenatingInsertAllRequest request) async {
-    for (final source in request.children) {
-      await _player.add(_convertAudioSourceIntoMediaKit(source));
-
-      final length = _player.state.playlist.medias.length;
-
-      if (length == 0 || length == 1) continue;
-
-      if (request.index < (length - 1) && request.index >= 0) {
-        await _player.move(length - 1, request.index);
-      }
-    }
-
+    await _player.open(_convertAudioSourceIntoMediaKit(request.children[0]));
     return ConcatenatingInsertAllResponse();
   }
 
   @override
   Future<ConcatenatingRemoveRangeResponse> concatenatingRemoveRange(
       ConcatenatingRemoveRangeRequest request) async {
-    for (var i = 0; i < request.endIndex - request.startIndex; i++) {
-      await _player.remove(request.startIndex);
-    }
+    try {
+      await _player.remove(0);
+    // ignore: empty_catches
+    } catch (e) {}
 
     return ConcatenatingRemoveRangeResponse();
   }
