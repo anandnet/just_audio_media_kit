@@ -1,5 +1,7 @@
 library just_audio_media_kit;
 
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:just_audio_media_kit/mediakit_player.dart';
 import 'package:just_audio_platform_interface/just_audio_platform_interface.dart';
@@ -38,7 +40,11 @@ class JustAudioMediaKit extends JustAudioPlatform {
 
   @override
   Future<AudioPlayerPlatform> init(InitRequest request) async {
-    MediaKit.ensureInitialized();
+    try {
+      MediaKit.ensureInitialized();
+    } catch(e) {
+      MediaKit.ensureInitialized(libmpv: "/usr/lib/libmpv.so");
+    }
 
     if (_players.containsKey(request.id)) {
       throw PlatformException(
