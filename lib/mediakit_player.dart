@@ -69,7 +69,8 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       }),
       _player.stream.error.listen((error) {
         _processingState = ProcessingStateMessage.idle;
-        _updatePlaybackEvent();
+        _eventController.addError(error);
+        //_updatePlaybackEvent();
         _logger.severe('ERROR OCCURRED: $error');
       }),
       _player.stream.playlist.listen((playlist) {
